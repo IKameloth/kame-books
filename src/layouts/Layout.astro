@@ -15,9 +15,14 @@ const { title } = Astro.props;
 		<link rel="icon" type="image/svg+xml" href="/favicon.svg" />
 		<meta name="generator" content={Astro.generator} />
 		<title>{title}</title>
+		<meta name="twitter:card" content="summary_large_image" />
+		<meta name="twitter:site" content="@tokameloth" />
+		<meta name="view-transition" content="same-origin" />
 	</head>
 	<body>
-		<slot />
+		<div id="content">
+			<slot />
+		</div>
 	</body>
 </html>
 <style is:global>
@@ -33,4 +38,33 @@ const { title } = Astro.props;
 		font-family: Menlo, Monaco, Lucida Console, Liberation Mono, DejaVu Sans Mono,
 			Bitstream Vera Sans Mono, Courier New, monospace;
 	}
+	@keyframes fade-in {
+		from { opacity: 0; }
+	}
 </style>
+<script>
+	if (document.startViewTransition) {
+		window.navigation.addEventListener('navigate', (event) => {
+			const toUrl = new URL(event.destination.url)
+			// si es una pagina externa, la ignoramos
+			if (location.origin !== toUrl.origin) return
+			// si es una navegacion dentro del mismo dominio (origin)
+			event.intercept({
+				async handler() {
+					// vamos a cargar la pagina de destino
+					// utilizando fetch
+					const response = await fetch(toUrl.pathname)
+					const text = await response.text()
+					// quedarse solo con el contenido html dentro de la etiqueta body
+					const [, data] = text.match(/<body>([\s\S]*)<\/body>/i)
+					// utilizar la api de ViewTransition API
+					document.startViewTransition(() => {
+						// como tiene que actualizar la vista
+						document.body.innerHTML = data
+						document.documentElement.scrollTop = 0
+					})
+				}
+			})
+		})
+	}
+</script>
